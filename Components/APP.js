@@ -17,6 +17,8 @@ const NUM_CHILDREN = 5;
 const M_X = 490;
 const M_Y = 450;
 
+const SPRING_CONFIG = [500, 20];
+
 // For the intricacies 
 
 // How far away from the main button does the child buttons go
@@ -95,12 +97,32 @@ class APP extends React.Component {
 		return (
 			<div>
 				{range(NUM_CHILDREN).map( index => {
-					let style = isOpen ? this.finalChildButtonStyles(index) : this.initialChildButtonStyles();
+					let style = isOpen 
+					? {
+						width: CHILD_BUTTON_DIAM,
+						height: CHILD_BUTTON_DIAM,
+						top: spring(childDeltaY(index), SPRING_CONFIG),
+						left: spring(childDeltaX(index), SPRING_CONFIG)
+					}
+					: {
+						width: CHILD_BUTTON_DIAM,
+						height: CHILD_BUTTON_DIAM,
+						top: spring(M_Y - (CHILD_BUTTON_DIAM/2), SPRING_CONFIG),
+						left: spring(M_X - (CHILD_BUTTON_DIAM/2), SPRING_CONFIG)
+					};
 					return (
-						<div 
-							key={index}
-							className="child-button"
-							style={style}/>
+						<Motion style={style} key={index}>
+							{({width, height, top, left}) => 
+								<div	
+									className="child-button"
+									style={{
+										width: width,
+										height: height,
+										top: top,
+										left: left
+									}}/>
+							}
+						</Motion>
 					);
 				})}
 				<div 

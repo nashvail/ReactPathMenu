@@ -15,7 +15,7 @@ html, body {
 	width: 90px;
 	height: 90px;
 	border-radius: 100%;
-	background-color: rgba(0, 0, 0, 0.3);
+	background-color: rgba(0, 0, 0, 1);
 	cursor: pointer;
 	box-shadow: rgba(0, 0, 0, 0.2) 0px 1px 3px;
 }
