@@ -1,0 +1,20 @@
+html, body {
+	background-color: #dddddd;
+}
+
+#container {
+	width: 100vw;
+	height: 100vh;
+	display: flex;
+	justify-content : center;
+	align-items: center;
+}
+
+.main-button {
+	width: 90px;
+	height: 90px;
+	border-radius: 100%;
+	background-color: #fff;
+	cursor: pointer;
+	box-shadow: rgba(0, 0, 0, 0.2) 0px 1px 3px;
+}
