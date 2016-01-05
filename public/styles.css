@@ -11,10 +11,20 @@ html, body {
 }
 
 .main-button {
+	position: absolute;
 	width: 90px;
 	height: 90px;
 	border-radius: 100%;
-	background-color: #fff;
+	background-color: rgba(0, 0, 0, 0.3);
 	cursor: pointer;
+	box-shadow: rgba(0, 0, 0, 0.2) 0px 1px 3px;
+}
+
+.child-button {
+	position: absolute;
+	width: 50px;
+	height: 50px;
+	border-radius: 100%;
+	background-color: blue;
 	box-shadow: rgba(0, 0, 0, 0.2) 0px 1px 3px;
 }

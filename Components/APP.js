@@ -1,15 +1,44 @@
+'use strict';
 import React from 'react';
 import ReactDOM from 'react-dom';
+import {Motion, spring} from 'react-motion';
+import range from 'lodash.range';
 
 // Components 
-import FlyMenu from './FlyMenu';
 
 //Constants 
 
 // Diameter of the main button in pixels
 const MAIN_BUTTON_DIAM = 90;
+const CHILD_BUTTON_DIAM = 40;
 // The number of child buttons that fly out from the main button
-const NUM_CHILDREN = 4;
+const NUM_CHILDREN = 5;
+// Hard code the position values of the mainButton
+const M_X = 490;
+const M_Y = 450;
+
+// For the intricacies 
+
+// How far away from the main button does the child buttons go
+const FLY_OUT_RADIUS = 120,
+	SEPARATION_ANGLE = 35, //degrees
+	FAN_ANGLE = (NUM_CHILDREN - 1) * SEPARATION_ANGLE,
+	BASE_ANGLE = (180 - FAN_ANGLE)/2; // degrees
+
+function toRadians(degrees) {
+	return degrees * 0.0174533;
+}
+
+function childDeltaX(index) {
+	let angle = BASE_ANGLE + (index* SEPARATION_ANGLE);
+	return ( M_X + FLY_OUT_RADIUS * Math.cos(toRadians(angle)) - (CHILD_BUTTON_DIAM/2));
+}
+
+function childDeltaY(index) {
+	let angle = BASE_ANGLE + (index* SEPARATION_ANGLE);
+	return ( M_Y - FLY_OUT_RADIUS * Math.sin(toRadians(angle)) - (CHILD_BUTTON_DIAM/2));
+}
+
 
 class APP extends React.Component {
 	constructor(props) {
@@ -19,23 +48,65 @@ class APP extends React.Component {
 			isOpen: false
 		};
 
-		// Returns the x and y coordinates of the center of the main button
-		this.mainButtonCenter = this.mainButtonCenter.bind(this);
+		// Bind this to the functions 
+		this.openMenu = this.openMenu.bind(this);
 	}
 
-	componentDidMount() {
+	mainButtonStyles() {
+		return {
+			width: MAIN_BUTTON_DIAM,
+			height: MAIN_BUTTON_DIAM,
+			top: M_Y - (MAIN_BUTTON_DIAM/2),
+			left: M_X - (MAIN_BUTTON_DIAM/2)
+		};
 	}
 
-	mainButtonCenter() {
-		let mainButton = ReactDOM.findDOMNode(this.refs.mainButton);
-		console.dir(mainButton);
-		return( {x: mainButton.offsetLeft + (MAIN_BUTTON_DIAM/2), y:mainButton.offsetTop + (MAIN_BUTTON_DIAM/2)} );
+	initialChildButtonStyles() {
+		return {
+			width: CHILD_BUTTON_DIAM,
+			height: CHILD_BUTTON_DIAM,
+			top: M_Y - (CHILD_BUTTON_DIAM/2),
+			left: M_X - (CHILD_BUTTON_DIAM/2)
+		};
+	}
+
+	finalChildButtonStyles(childIndex) {
+		// we've gotta figure out al lthe math here right ? 
+		let deltaX = childDeltaX(childIndex),
+			deltaY = childDeltaY(childIndex);
+
+		return {
+			width: CHILD_BUTTON_DIAM,
+			height: CHILD_BUTTON_DIAM,
+			top: deltaY,
+			left: deltaX
+		};
+	}
+
+	openMenu() {
+		let{isOpen} = this.state;
+		this.setState({
+			isOpen: !isOpen
+		});
 	}
 
 	render() {
+		let {isOpen} = this.state;
 		return (
 			<div>
-				<FlyMenu parent={this} ref="mainButton" diam={MAIN_BUTTON_DIAM} />
+				{range(NUM_CHILDREN).map( index => {
+					let style = isOpen ? this.finalChildButtonStyles(index) : this.initialChildButtonStyles();
+					return (
+						<div 
+							key={index}
+							className="child-button"
+							style={style}/>
+					);
+				})}
+				<div 
+					className="main-button"
+					style={this.mainButtonStyles()}
+					onClick={this.openMenu}/>
 			</div>
 		);
 	}	
