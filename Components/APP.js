@@ -24,8 +24,8 @@ const SPRING_CONFIG = [500, 20];
 // How far away from the main button does the child buttons go
 const FLY_OUT_RADIUS = 120,
 	SEPARATION_ANGLE = 40, //degrees
-	FAN_ANGLE = (NUM_CHILDREN - 1) * SEPARATION_ANGLE,
-	BASE_ANGLE = (180 - FAN_ANGLE)/2; // degrees
+	FAN_ANGLE = (NUM_CHILDREN - 1) * SEPARATION_ANGLE, //degrees
+	BASE_ANGLE = ((180 - FAN_ANGLE)/2); // degrees
 
 function toRadians(degrees) {
 	return degrees * 0.0174533;
