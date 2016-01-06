@@ -12,7 +12,7 @@ import range from 'lodash.range';
 const MAIN_BUTTON_DIAM = 90;
 const CHILD_BUTTON_DIAM = 50;
 // The number of child buttons that fly out from the main button
-const NUM_CHILDREN = 5;
+const NUM_CHILDREN = 4;
 // Hard code the position values of the mainButton
 const M_X = 490;
 const M_Y = 450;
@@ -47,11 +47,21 @@ class APP extends React.Component {
 		super(props);	
 
 		this.state = {
-			isOpen: false
+			isOpen: false,
+			childButtons: []
 		};
 
 		// Bind this to the functions 
 		this.openMenu = this.openMenu.bind(this);
+	}
+
+	componentDidMount() {
+		let childButtons = [];
+		range(NUM_CHILDREN).forEach(index => {
+			childButtons.push(this.renderChildButton(index));
+		});
+
+		this.setState({childButtons: childButtons.slice(0)});
 	}
 
 	mainButtonStyles() {
@@ -67,21 +77,17 @@ class APP extends React.Component {
 		return {
 			width: CHILD_BUTTON_DIAM,
 			height: CHILD_BUTTON_DIAM,
-			top: M_Y - (CHILD_BUTTON_DIAM/2),
-			left: M_X - (CHILD_BUTTON_DIAM/2)
+			top: spring(M_Y - (CHILD_BUTTON_DIAM/2), SPRING_CONFIG),
+			left: spring(M_X - (CHILD_BUTTON_DIAM/2), SPRING_CONFIG)
 		};
 	}
 
 	finalChildButtonStyles(childIndex) {
-		// we've gotta figure out al lthe math here right ? 
-		let deltaX = childDeltaX(childIndex),
-			deltaY = childDeltaY(childIndex);
-
 		return {
 			width: CHILD_BUTTON_DIAM,
 			height: CHILD_BUTTON_DIAM,
-			top: deltaY,
-			left: deltaX
+			top: spring(childDeltaY(childIndex), SPRING_CONFIG),
+			left: spring(childDeltaX(childIndex), SPRING_CONFIG)
 		};
 	}
 
@@ -90,40 +96,41 @@ class APP extends React.Component {
 		this.setState({
 			isOpen: !isOpen
 		});
+
+		range(NUM_CHILDREN).forEach((index) => {
+			let {childButtons} = this.state;
+			setTimeout(() => {
+				childButtons[NUM_CHILDREN - index - 1]	= this.renderChildButton(NUM_CHILDREN - index - 1);
+				this.setState({childButtons: childButtons.slice(0)});
+			}, index * 50);
+		});
+	}
+
+	renderChildButton(index) {
+		let {isOpen} = this.state;
+		let style = isOpen ? this.finalChildButtonStyles(index) : this.initialChildButtonStyles() ;
+		return (
+			<Motion style={style} key={index}>
+				{({width, height, top, left}) => 
+					<div	
+						className="child-button"
+						style={{
+							width: width,
+							height: height,
+							top: top,
+							left: left
+						}}/>
+				}
+			</Motion>
+		);
 	}
 
 	render() {
-		let {isOpen} = this.state;
+		let {isOpen, childButtons} = this.state;
 		return (
 			<div>
-				{range(NUM_CHILDREN).map( index => {
-					let style = isOpen 
-					? {
-						width: CHILD_BUTTON_DIAM,
-						height: CHILD_BUTTON_DIAM,
-						top: spring(childDeltaY(index), SPRING_CONFIG),
-						left: spring(childDeltaX(index), SPRING_CONFIG)
-					}
-					: {
-						width: CHILD_BUTTON_DIAM,
-						height: CHILD_BUTTON_DIAM,
-						top: spring(M_Y - (CHILD_BUTTON_DIAM/2), SPRING_CONFIG),
-						left: spring(M_X - (CHILD_BUTTON_DIAM/2), SPRING_CONFIG)
-					};
-					return (
-						<Motion style={style} key={index}>
-							{({width, height, top, left}) => 
-								<div	
-									className="child-button"
-									style={{
-										width: width,
-										height: height,
-										top: top,
-										left: left
-									}}/>
-							}
-						</Motion>
-					);
+				{childButtons.map( (button, index) => {
+					return childButtons[index];
 				})}
 				<div 
 					className="main-button"
