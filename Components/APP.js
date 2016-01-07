@@ -10,19 +10,19 @@ import range from 'lodash.range';
 
 // Diameter of the main button in pixels
 const MAIN_BUTTON_DIAM = 90;
-const CHILD_BUTTON_DIAM = 50;
+const CHILD_BUTTON_DIAM = 45;
 // The number of child buttons that fly out from the main button
-const NUM_CHILDREN = 4;
+const NUM_CHILDREN = 5;
 // Hard code the position values of the mainButton
 const M_X = 490;
 const M_Y = 450;
 
-const SPRING_CONFIG = [500, 20];
+const SPRING_CONFIG = [400, 20];
 
 // For the intricacies 
 
 // How far away from the main button does the child buttons go
-const FLY_OUT_RADIUS = 120,
+const FLY_OUT_RADIUS = 130,
 	SEPARATION_ANGLE = 40, //degrees
 	FAN_ANGLE = (NUM_CHILDREN - 1) * SEPARATION_ANGLE, //degrees
 	BASE_ANGLE = ((180 - FAN_ANGLE)/2); // degrees
@@ -102,7 +102,7 @@ class APP extends React.Component {
 			setTimeout(() => {
 				childButtons[NUM_CHILDREN - index - 1]	= this.renderChildButton(NUM_CHILDREN - index - 1);
 				this.setState({childButtons: childButtons.slice(0)});
-			}, index * 50);
+			}, index * 100);
 		});
 	}
 

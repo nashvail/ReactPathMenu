@@ -19691,7 +19691,7 @@
 	var MAIN_BUTTON_DIAM = 90;
 	var CHILD_BUTTON_DIAM = 50;
 	// The number of child buttons that fly out from the main button
-	var NUM_CHILDREN = 5;
+	var NUM_CHILDREN = 4;
 	// Hard code the position values of the mainButton
 	var M_X = 490;
 	var M_Y = 450;
@@ -19731,7 +19731,8 @@
 			var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(APP).call(this, props));
 
 			_this.state = {
-				isOpen: false
+				isOpen: false,
+				childButtons: []
 			};
 
 			// Bind this to the functions
@@ -19740,6 +19741,18 @@
 		}
 
 		_createClass(APP, [{
+			key: 'componentDidMount',
+			value: function componentDidMount() {
+				var _this2 = this;
+
+				var childButtons = [];
+				(0, _lodash2.default)(NUM_CHILDREN).forEach(function (index) {
+					childButtons.push(_this2.renderChildButton(index));
+				});
+
+				this.setState({ childButtons: childButtons.slice(0) });
+			}
+		}, {
 			key: 'mainButtonStyles',
 			value: function mainButtonStyles() {
 				return {
@@ -19755,71 +19768,77 @@
 				return {
 					width: CHILD_BUTTON_DIAM,
 					height: CHILD_BUTTON_DIAM,
-					top: M_Y - CHILD_BUTTON_DIAM / 2,
-					left: M_X - CHILD_BUTTON_DIAM / 2
+					top: (0, _reactMotion.spring)(M_Y - CHILD_BUTTON_DIAM / 2, SPRING_CONFIG),
+					left: (0, _reactMotion.spring)(M_X - CHILD_BUTTON_DIAM / 2, SPRING_CONFIG)
 				};
 			}
 		}, {
 			key: 'finalChildButtonStyles',
 			value: function finalChildButtonStyles(childIndex) {
-				// we've gotta figure out al lthe math here right ?
-				var deltaX = childDeltaX(childIndex),
-				    deltaY = childDeltaY(childIndex);
-
 				return {
 					width: CHILD_BUTTON_DIAM,
 					height: CHILD_BUTTON_DIAM,
-					top: deltaY,
-					left: deltaX
+					top: (0, _reactMotion.spring)(childDeltaY(childIndex), SPRING_CONFIG),
+					left: (0, _reactMotion.spring)(childDeltaX(childIndex), SPRING_CONFIG)
 				};
 			}
 		}, {
 			key: 'openMenu',
 			value: function openMenu() {
+				var _this3 = this;
+
 				var isOpen = this.state.isOpen;
 
 				this.setState({
 					isOpen: !isOpen
 				});
+
+				(0, _lodash2.default)(NUM_CHILDREN).forEach(function (index) {
+					var childButtons = _this3.state.childButtons;
+
+					setTimeout(function () {
+						childButtons[NUM_CHILDREN - index - 1] = _this3.renderChildButton(NUM_CHILDREN - index - 1);
+						_this3.setState({ childButtons: childButtons.slice(0) });
+					}, index * 50);
+				});
+			}
+		}, {
+			key: 'renderChildButton',
+			value: function renderChildButton(index) {
+				var isOpen = this.state.isOpen;
+
+				var style = isOpen ? this.finalChildButtonStyles(index) : this.initialChildButtonStyles();
+				return _react2.default.createElement(
+					_reactMotion.Motion,
+					{ style: style, key: index },
+					function (_ref) {
+						var width = _ref.width;
+						var height = _ref.height;
+						var top = _ref.top;
+						var left = _ref.left;
+						return _react2.default.createElement('div', {
+							className: 'child-button',
+							style: {
+								width: width,
+								height: height,
+								top: top,
+								left: left
+							} });
+					}
+				);
 			}
 		}, {
 			key: 'render',
 			value: function render() {
-				var isOpen = this.state.isOpen;
+				var _state = this.state;
+				var isOpen = _state.isOpen;
+				var childButtons = _state.childButtons;
 
 				return _react2.default.createElement(
 					'div',
 					null,
-					(0, _lodash2.default)(NUM_CHILDREN).map(function (index) {
-						var style = isOpen ? {
-							width: CHILD_BUTTON_DIAM,
-							height: CHILD_BUTTON_DIAM,
-							top: (0, _reactMotion.spring)(childDeltaY(index), SPRING_CONFIG),
-							left: (0, _reactMotion.spring)(childDeltaX(index), SPRING_CONFIG)
-						} : {
-							width: CHILD_BUTTON_DIAM,
-							height: CHILD_BUTTON_DIAM,
-							top: (0, _reactMotion.spring)(M_Y - CHILD_BUTTON_DIAM / 2, SPRING_CONFIG),
-							left: (0, _reactMotion.spring)(M_X - CHILD_BUTTON_DIAM / 2, SPRING_CONFIG)
-						};
-						return _react2.default.createElement(
-							_reactMotion.Motion,
-							{ style: style, key: index },
-							function (_ref) {
-								var width = _ref.width;
-								var height = _ref.height;
-								var top = _ref.top;
-								var left = _ref.left;
-								return _react2.default.createElement('div', {
-									className: 'child-button',
-									style: {
-										width: width,
-										height: height,
-										top: top,
-										left: left
-									} });
-							}
-						);
+					childButtons.map(function (button, index) {
+						return childButtons[index];
 					}),
 					_react2.default.createElement('div', {
 						className: 'main-button',
