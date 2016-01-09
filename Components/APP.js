@@ -10,16 +10,14 @@ import range from 'lodash.range';
 
 // Diameter of the main button in pixels
 const MAIN_BUTTON_DIAM = 90;
-const CHILD_BUTTON_DIAM = 45;
+const CHILD_BUTTON_DIAM = 48;
 // The number of child buttons that fly out from the main button
 const NUM_CHILDREN = 5;
 // Hard code the position values of the mainButton
 const M_X = 490;
 const M_Y = 450;
 
-const SPRING_CONFIG = [400, 20];
-
-// For the intricacies 
+const SPRING_CONFIG = [400, 28];
 
 // How far away from the main button does the child buttons go
 const FLY_OUT_RADIUS = 130,
@@ -27,18 +25,23 @@ const FLY_OUT_RADIUS = 130,
 	FAN_ANGLE = (NUM_CHILDREN - 1) * SEPARATION_ANGLE, //degrees
 	BASE_ANGLE = ((180 - FAN_ANGLE)/2); // degrees
 
+// Names of icons for each button retreived from fontAwesome, we'll add a little extra just in case 
+// the NUM_CHILDREN is changed to a bigger value
+let childButtonIcons = ['pencil', 'at', 'camera', 'bell', 'comment', 'bolt', 'ban', 'code'];
+
+
+// Utility functions
+
 function toRadians(degrees) {
 	return degrees * 0.0174533;
 }
 
-function childDeltaX(index) {
+function finalChildDeltaPositions(index) {
 	let angle = BASE_ANGLE + (index* SEPARATION_ANGLE);
-	return ( M_X + FLY_OUT_RADIUS * Math.cos(toRadians(angle)) - (CHILD_BUTTON_DIAM/2));
-}
-
-function childDeltaY(index) {
-	let angle = BASE_ANGLE + (index* SEPARATION_ANGLE);
-	return ( M_Y - FLY_OUT_RADIUS * Math.sin(toRadians(angle)) - (CHILD_BUTTON_DIAM/2));
+	return {
+		deltaX: FLY_OUT_RADIUS * Math.cos(toRadians(angle)) - (CHILD_BUTTON_DIAM/2),
+		deltaY: FLY_OUT_RADIUS * Math.sin(toRadians(angle)) + (CHILD_BUTTON_DIAM/2)
+	};
 }
 
 
@@ -52,10 +55,13 @@ class APP extends React.Component {
 		};
 
 		// Bind this to the functions 
-		this.openMenu = this.openMenu.bind(this);
+		this.toggleMenu = this.toggleMenu.bind(this);
+		this.closeMenu = this.closeMenu.bind(this);
+		this.animateChildButtonsWithDelay = this.animateChildButtonsWithDelay.bind(this);
 	}
 
 	componentDidMount() {
+		window.addEventListener('click', this.closeMenu);
 		let childButtons = [];
 		range(NUM_CHILDREN).forEach(index => {
 			childButtons.push(this.renderChildButton(index));
@@ -78,31 +84,46 @@ class APP extends React.Component {
 			width: CHILD_BUTTON_DIAM,
 			height: CHILD_BUTTON_DIAM,
 			top: spring(M_Y - (CHILD_BUTTON_DIAM/2), SPRING_CONFIG),
-			left: spring(M_X - (CHILD_BUTTON_DIAM/2), SPRING_CONFIG)
+			left: spring(M_X - (CHILD_BUTTON_DIAM/2), SPRING_CONFIG),
+			rotate: spring(-180, SPRING_CONFIG),
+			scale: spring(0.5, SPRING_CONFIG)
 		};
 	}
 
 	finalChildButtonStyles(childIndex) {
+		let {deltaX, deltaY} = finalChildDeltaPositions(childIndex);
 		return {
 			width: CHILD_BUTTON_DIAM,
 			height: CHILD_BUTTON_DIAM,
-			top: spring(childDeltaY(childIndex), SPRING_CONFIG),
-			left: spring(childDeltaX(childIndex), SPRING_CONFIG)
+			top: spring(M_Y - deltaY, SPRING_CONFIG),
+			left: spring(M_X + deltaX, SPRING_CONFIG),
+			rotate: spring(0, SPRING_CONFIG),
+			scale: spring(1, SPRING_CONFIG)
 		};
 	}
 
-	openMenu() {
+	toggleMenu(e) {
+		e.stopPropagation();
 		let{isOpen} = this.state;
 		this.setState({
 			isOpen: !isOpen
 		});
 
+		this.animateChildButtonsWithDelay();
+	}
+
+	closeMenu() {
+		this.setState({ isOpen: false});
+		this.animateChildButtonsWithDelay();
+	}
+
+	animateChildButtonsWithDelay() {
 		range(NUM_CHILDREN).forEach((index) => {
 			let {childButtons} = this.state;
 			setTimeout(() => {
 				childButtons[NUM_CHILDREN - index - 1]	= this.renderChildButton(NUM_CHILDREN - index - 1);
 				this.setState({childButtons: childButtons.slice(0)});
-			}, index * 100);
+			}, index * 50);
 		});
 	}
 
@@ -111,15 +132,18 @@ class APP extends React.Component {
 		let style = isOpen ? this.finalChildButtonStyles(index) : this.initialChildButtonStyles() ;
 		return (
 			<Motion style={style} key={index}>
-				{({width, height, top, left}) => 
+				{({width, height, top, left, rotate, scale}) => 
 					<div	
 						className="child-button"
 						style={{
 							width: width,
 							height: height,
 							top: top,
-							left: left
-						}}/>
+							left: left,
+							transform: `rotate(${rotate}deg) scale(${scale})`
+						}}>
+						<i className={"fa fa-" + childButtonIcons[index] + " fa-lg"}></i>
+					</div>
 				}
 			</Motion>
 		);
@@ -127,15 +151,23 @@ class APP extends React.Component {
 
 	render() {
 		let {isOpen, childButtons} = this.state;
+		let mainButtonRotation = isOpen ? {rotate: spring(0, [500, 30])} : {rotate: spring(-135, [500, 30])};
 		return (
 			<div>
 				{childButtons.map( (button, index) => {
 					return childButtons[index];
 				})}
-				<div 
-					className="main-button"
-					style={this.mainButtonStyles()}
-					onClick={this.openMenu}/>
+				<Motion style={mainButtonRotation}>
+					{({rotate}) => 
+						<div 
+							className="main-button"
+							style={{...this.mainButtonStyles(), transform: `rotate(${rotate}deg)`}}
+							onClick={this.toggleMenu}>
+						{/*Using fa-close instead of fa-plus because fa-plus doesn't center properly*/}
+							<i className="fa fa-close fa-3x"/>
+						</div>
+					}
+				</Motion>
 			</div>
 		);
 	}	

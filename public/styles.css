@@ -5,9 +5,6 @@ html, body {
 #container {
 	width: 100vw;
 	height: 100vh;
-	display: flex;
-	justify-content : center;
-	align-items: center;
 }
 
 .main-button {
@@ -17,20 +14,24 @@ html, body {
 	border-radius: 100%;
 	background-color: #68AEF0;
 	cursor: pointer;
-	box-shadow: rgba(0, 0, 0, 0.2) 0px 1px 3px;
+	display: flex;
+	justify-content : center;
+	align-items: center;
+	color: #ffffff;
+	font-weight: lighter;
+	border: 1px solid rgba(0, 0, 0, 0.1);
 }
 
 .child-button {
 	position: absolute;
+	display: flex;
+	justify-content: center;
+	align-items: center;
 	width: 50px;
 	height: 50px;
 	border-radius: 100%;
 	background-color: white;
 	box-shadow: rgba(0, 0, 0, 0.2) 0px 1px 3px;
+	color: #8898A5;
 }
 
-.box {
-	width: 50px;
-	height: 50px;
-	background-color: black;
-}
