@@ -4,6 +4,7 @@
   "description": "Path fan menu recreted in using React Motion",
   "main": "app.js",
   "scripts": {
+    "start": "webpack",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Nash Vail",

@@ -19659,6 +19659,8 @@
 
 	'use strict';
 
+	var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
+
 	var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
 
 	var _react = __webpack_require__(1);
@@ -19689,37 +19691,39 @@
 
 	// Diameter of the main button in pixels
 	var MAIN_BUTTON_DIAM = 90;
-	var CHILD_BUTTON_DIAM = 50;
+	var CHILD_BUTTON_DIAM = 48;
 	// The number of child buttons that fly out from the main button
-	var NUM_CHILDREN = 4;
+	var NUM_CHILDREN = 5;
 	// Hard code the position values of the mainButton
 	var M_X = 490;
 	var M_Y = 450;
 
-	var SPRING_CONFIG = [500, 20];
-
-	// For the intricacies
+	var SPRING_CONFIG = [400, 28];
 
 	// How far away from the main button does the child buttons go
-	var FLY_OUT_RADIUS = 120,
+	var FLY_OUT_RADIUS = 130,
 	    SEPARATION_ANGLE = 40,
 	    //degrees
 	FAN_ANGLE = (NUM_CHILDREN - 1) * SEPARATION_ANGLE,
 	    //degrees
 	BASE_ANGLE = (180 - FAN_ANGLE) / 2; // degrees
 
+	// Names of icons for each button retreived from fontAwesome, we'll add a little extra just in case
+	// the NUM_CHILDREN is changed to a bigger value
+	var childButtonIcons = ['pencil', 'at', 'camera', 'bell', 'comment', 'bolt', 'ban', 'code'];
+
+	// Utility functions
+
 	function toRadians(degrees) {
 		return degrees * 0.0174533;
 	}
 
-	function childDeltaX(index) {
+	function finalChildDeltaPositions(index) {
 		var angle = BASE_ANGLE + index * SEPARATION_ANGLE;
-		return M_X + FLY_OUT_RADIUS * Math.cos(toRadians(angle)) - CHILD_BUTTON_DIAM / 2;
-	}
-
-	function childDeltaY(index) {
-		var angle = BASE_ANGLE + index * SEPARATION_ANGLE;
-		return M_Y - FLY_OUT_RADIUS * Math.sin(toRadians(angle)) - CHILD_BUTTON_DIAM / 2;
+		return {
+			deltaX: FLY_OUT_RADIUS * Math.cos(toRadians(angle)) - CHILD_BUTTON_DIAM / 2,
+			deltaY: FLY_OUT_RADIUS * Math.sin(toRadians(angle)) + CHILD_BUTTON_DIAM / 2
+		};
 	}
 
 	var APP = (function (_React$Component) {
@@ -19736,7 +19740,9 @@
 			};
 
 			// Bind this to the functions
-			_this.openMenu = _this.openMenu.bind(_this);
+			_this.toggleMenu = _this.toggleMenu.bind(_this);
+			_this.closeMenu = _this.closeMenu.bind(_this);
+			_this.animateChildButtonsWithDelay = _this.animateChildButtonsWithDelay.bind(_this);
 			return _this;
 		}
 
@@ -19745,6 +19751,7 @@
 			value: function componentDidMount() {
 				var _this2 = this;
 
+				window.addEventListener('click', this.closeMenu);
 				var childButtons = [];
 				(0, _lodash2.default)(NUM_CHILDREN).forEach(function (index) {
 					childButtons.push(_this2.renderChildButton(index));
@@ -19769,29 +19776,50 @@
 					width: CHILD_BUTTON_DIAM,
 					height: CHILD_BUTTON_DIAM,
 					top: (0, _reactMotion.spring)(M_Y - CHILD_BUTTON_DIAM / 2, SPRING_CONFIG),
-					left: (0, _reactMotion.spring)(M_X - CHILD_BUTTON_DIAM / 2, SPRING_CONFIG)
+					left: (0, _reactMotion.spring)(M_X - CHILD_BUTTON_DIAM / 2, SPRING_CONFIG),
+					rotate: (0, _reactMotion.spring)(-180, SPRING_CONFIG),
+					scale: (0, _reactMotion.spring)(0.5, SPRING_CONFIG)
 				};
 			}
 		}, {
 			key: 'finalChildButtonStyles',
 			value: function finalChildButtonStyles(childIndex) {
+				var _finalChildDeltaPosit = finalChildDeltaPositions(childIndex);
+
+				var deltaX = _finalChildDeltaPosit.deltaX;
+				var deltaY = _finalChildDeltaPosit.deltaY;
+
 				return {
 					width: CHILD_BUTTON_DIAM,
 					height: CHILD_BUTTON_DIAM,
-					top: (0, _reactMotion.spring)(childDeltaY(childIndex), SPRING_CONFIG),
-					left: (0, _reactMotion.spring)(childDeltaX(childIndex), SPRING_CONFIG)
+					top: (0, _reactMotion.spring)(M_Y - deltaY, SPRING_CONFIG),
+					left: (0, _reactMotion.spring)(M_X + deltaX, SPRING_CONFIG),
+					rotate: (0, _reactMotion.spring)(0, SPRING_CONFIG),
+					scale: (0, _reactMotion.spring)(1, SPRING_CONFIG)
 				};
 			}
 		}, {
-			key: 'openMenu',
-			value: function openMenu() {
-				var _this3 = this;
-
+			key: 'toggleMenu',
+			value: function toggleMenu(e) {
+				e.stopPropagation();
 				var isOpen = this.state.isOpen;
 
 				this.setState({
 					isOpen: !isOpen
 				});
+
+				this.animateChildButtonsWithDelay();
+			}
+		}, {
+			key: 'closeMenu',
+			value: function closeMenu() {
+				this.setState({ isOpen: false });
+				this.animateChildButtonsWithDelay();
+			}
+		}, {
+			key: 'animateChildButtonsWithDelay',
+			value: function animateChildButtonsWithDelay() {
+				var _this3 = this;
 
 				(0, _lodash2.default)(NUM_CHILDREN).forEach(function (index) {
 					var childButtons = _this3.state.childButtons;
@@ -19816,34 +19844,55 @@
 						var height = _ref.height;
 						var top = _ref.top;
 						var left = _ref.left;
-						return _react2.default.createElement('div', {
-							className: 'child-button',
-							style: {
-								width: width,
-								height: height,
-								top: top,
-								left: left
-							} });
+						var rotate = _ref.rotate;
+						var scale = _ref.scale;
+						return _react2.default.createElement(
+							'div',
+							{
+								className: 'child-button',
+								style: {
+									width: width,
+									height: height,
+									top: top,
+									left: left,
+									transform: 'rotate(' + rotate + 'deg) scale(' + scale + ')'
+								} },
+							_react2.default.createElement('i', { className: "fa fa-" + childButtonIcons[index] + " fa-lg" })
+						);
 					}
 				);
 			}
 		}, {
 			key: 'render',
 			value: function render() {
+				var _this4 = this;
+
 				var _state = this.state;
 				var isOpen = _state.isOpen;
 				var childButtons = _state.childButtons;
 
+				var mainButtonRotation = isOpen ? { rotate: (0, _reactMotion.spring)(0, [500, 30]) } : { rotate: (0, _reactMotion.spring)(-135, [500, 30]) };
 				return _react2.default.createElement(
 					'div',
 					null,
 					childButtons.map(function (button, index) {
 						return childButtons[index];
 					}),
-					_react2.default.createElement('div', {
-						className: 'main-button',
-						style: this.mainButtonStyles(),
-						onClick: this.openMenu })
+					_react2.default.createElement(
+						_reactMotion.Motion,
+						{ style: mainButtonRotation },
+						function (_ref2) {
+							var rotate = _ref2.rotate;
+							return _react2.default.createElement(
+								'div',
+								{
+									className: 'main-button',
+									style: _extends({}, _this4.mainButtonStyles(), { transform: 'rotate(' + rotate + 'deg)' }),
+									onClick: _this4.toggleMenu },
+								_react2.default.createElement('i', { className: 'fa fa-close fa-3x' })
+							);
+						}
+					)
 				);
 			}
 		}]);
