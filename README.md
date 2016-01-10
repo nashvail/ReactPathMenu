@@ -1,6 +1,6 @@
 #ReactPathMenu
 
-[Read the tutorial here.](https://medium.com/@nashvail/recreating-the-apple-tv-icons-in-javascript-and-css-eec306d41617)
+[Read the tutorial here.](https://medium.com/@nashvail/a-gentle-introduction-to-react-motion-dc50dd9f2459#.bgck7roe9)
 
 Demo
 =====
