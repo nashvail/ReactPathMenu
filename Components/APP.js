@@ -1,7 +1,7 @@
 'use strict';
 import React from 'react';
 import ReactDOM from 'react-dom';
-import {Motion, spring} from 'react-motion';
+import {Motion, StaggeredMotion, spring} from 'react-motion';
 import range from 'lodash.range';
 
 // Components 
@@ -47,25 +47,21 @@ function finalChildDeltaPositions(index) {
 
 class APP extends React.Component {
 	constructor(props) {
-		super(props);	
+		super(props);
 
 		this.state = {
 			isOpen: false,
 			childButtons: []
 		};
 
-		// Bind this to the functions 
+		// Bind this to the functions
 		this.toggleMenu = this.toggleMenu.bind(this);
 		this.closeMenu = this.closeMenu.bind(this);
-		this.animateChildButtonsWithDelay = this.animateChildButtonsWithDelay.bind(this);
 	}
 
 	componentDidMount() {
 		window.addEventListener('click', this.closeMenu);
 		let childButtons = [];
-		range(NUM_CHILDREN).forEach(index => {
-			childButtons.push(this.renderChildButton(index));
-		});
 
 		this.setState({childButtons: childButtons.slice(0)});
 	}
@@ -108,58 +104,71 @@ class APP extends React.Component {
 		this.setState({
 			isOpen: !isOpen
 		});
-
-		this.animateChildButtonsWithDelay();
 	}
 
 	closeMenu() {
 		this.setState({ isOpen: false});
-		this.animateChildButtonsWithDelay();
 	}
 
-	animateChildButtonsWithDelay() {
-		range(NUM_CHILDREN).forEach((index) => {
-			let {childButtons} = this.state;
-			setTimeout(() => {
-				childButtons[NUM_CHILDREN - index - 1]	= this.renderChildButton(NUM_CHILDREN - index - 1);
-				this.setState({childButtons: childButtons.slice(0)});
-			}, index * 50);
-		});
-	}
+    renderChildButtons() {
+        const {isOpen} = this.state;
+        const targetButtonStyles = range(NUM_CHILDREN).map(i => {
+            return isOpen ? this.finalChildButtonStyles(i) : this.initialChildButtonStyles();
+        });
 
-	renderChildButton(index) {
-		let {isOpen} = this.state;
-		let style = isOpen ? this.finalChildButtonStyles(index) : this.initialChildButtonStyles() ;
-		return (
-			<Motion style={style} key={index}>
-				{({width, height, top, left, rotate, scale}) => 
-					<div	
-						className="child-button"
-						style={{
-							width: width,
-							height: height,
-							top: top,
-							left: left,
-							transform: `rotate(${rotate}deg) scale(${scale})`
-						}}>
-						<i className={"fa fa-" + childButtonIcons[index] + " fa-lg"}></i>
-					</div>
-				}
-			</Motion>
-		);
-	}
+        const scaleMin = this.initialChildButtonStyles().scale.val;
+        const scaleMax = this.finalChildButtonStyles(0).scale.val;
+        const offset = 0.2;
+
+        let calculateStylesForNextFrame = prevFrameStyles => {
+            return prevFrameStyles.map((style, i) => {
+                if (i === 0) {
+                    return targetButtonStyles[i];
+                }
+
+                const prevButtonScale = prevFrameStyles[i - 1].scale;
+                const shouldApplyTargetStyle = isOpen ? prevButtonScale >= scaleMin + offset : prevButtonScale <= scaleMax - offset;
+
+                return shouldApplyTargetStyle ? targetButtonStyles[i] : style;
+            });
+        };
+
+        return (
+            <StaggeredMotion
+                defaultStyles={targetButtonStyles}
+                styles={calculateStylesForNextFrame}>
+                {interpolatedStyles =>
+                    <div>
+                        {interpolatedStyles.map(({height, left, rotate, scale, top, width}, index) =>
+                            <div
+                                className="child-button"
+                                key={index}
+                                style={{
+								    left: left,
+								    height: height,
+								    top: top,
+								    transform: `rotate(${rotate}deg) scale(${scale})`,
+								    width: width
+							    }}
+                            >
+                                <i className={"fa fa-" + childButtonIcons[index] + " fa-lg"}></i>
+                            </div>
+                        )}
+                    </div>
+                }
+            </StaggeredMotion>
+        );
+    }
 
 	render() {
-		let {isOpen, childButtons} = this.state;
+		let {isOpen} = this.state;
 		let mainButtonRotation = isOpen ? {rotate: spring(0, [500, 30])} : {rotate: spring(-135, [500, 30])};
 		return (
 			<div>
-				{childButtons.map( (button, index) => {
-					return childButtons[index];
-				})}
+                {this.renderChildButtons()}
 				<Motion style={mainButtonRotation}>
-					{({rotate}) => 
-						<div 
+					{({rotate}) =>
+						<div
 							className="main-button"
 							style={{...this.mainButtonStyles(), transform: `rotate(${rotate}deg)`}}
 							onClick={this.toggleMenu}>
@@ -170,7 +179,7 @@ class APP extends React.Component {
 				</Motion>
 			</div>
 		);
-	}	
+	}
 };
 
 module.exports = APP;
