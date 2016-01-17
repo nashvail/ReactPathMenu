@@ -19883,7 +19883,9 @@
 				// BUTTON NO 1    -----------------------------o-|---------------------------------------------
 				// BUTTON NO 2    -------------------------------|------------------------------------O--------
 				var calculateStylesForNextFrame = function calculateStylesForNextFrame(prevFrameStyles) {
-					return prevFrameStyles.map(function (buttonStyleInPreviousFrame, i) {
+					prevFrameStyles = isOpen ? prevFrameStyles : prevFrameStyles.reverse();
+
+					var nextFrameTargetStyles = prevFrameStyles.map(function (buttonStyleInPreviousFrame, i) {
 						//animation always starts from first button
 						if (i === 0) {
 							return targetButtonStyles[i];
@@ -19900,6 +19902,8 @@
 
 						return shouldApplyTargetStyle() ? targetButtonStyles[i] : buttonStyleInPreviousFrame;
 					});
+
+					return isOpen ? nextFrameTargetStyles : nextFrameTargetStyles.reverse();
 				};
 
 				return _react2.default.createElement(

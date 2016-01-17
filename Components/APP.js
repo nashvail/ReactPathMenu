@@ -175,7 +175,9 @@ class APP extends React.Component {
 		// BUTTON NO 1    -----------------------------o-|---------------------------------------------
 		// BUTTON NO 2    -------------------------------|------------------------------------O--------
 		let calculateStylesForNextFrame = prevFrameStyles => {
-			return prevFrameStyles.map((buttonStyleInPreviousFrame, i) => {
+			prevFrameStyles = isOpen ? prevFrameStyles : prevFrameStyles.reverse();
+
+			let nextFrameTargetStyles =  prevFrameStyles.map((buttonStyleInPreviousFrame, i) => {
 				//animation always starts from first button
 				if (i === 0) {
 					return targetButtonStyles[i];
@@ -192,48 +194,50 @@ class APP extends React.Component {
 
 				return shouldApplyTargetStyle() ? targetButtonStyles[i] : buttonStyleInPreviousFrame;
 			});
+
+			return isOpen ? nextFrameTargetStyles : nextFrameTargetStyles.reverse();
 		};
 
-        return (
-            <StaggeredMotion
-                defaultStyles={targetButtonStyles}
-                styles={calculateStylesForNextFrame}>
-                {interpolatedStyles =>
-                    <div>
-                        {interpolatedStyles.map(({height, left, rotate, scale, top, width}, index) =>
-                            <div
-                                className="child-button"
-                                key={index}
-                                style={{
-								    left,
-								    height,
-								    top,
-								    transform: `rotate(${rotate}deg) scale(${scale})`,
-								    width
-							    }}
-                            >
-                                <i className={"fa fa-" + childButtonIcons[index] + " fa-lg"}></i>
-                            </div>
-                        )}
-                    </div>
-                }
-            </StaggeredMotion>
-        );
-    }
+		return (
+			<StaggeredMotion
+				defaultStyles={targetButtonStyles}
+				styles={calculateStylesForNextFrame}>
+				{interpolatedStyles =>
+					<div>
+						{interpolatedStyles.map(({height, left, rotate, scale, top, width}, index) =>
+							<div
+								className="child-button"
+								key={index}
+								style={{
+									left,
+									height,
+									top,
+									transform: `rotate(${rotate}deg) scale(${scale})`,
+									width
+								}}
+							>
+								<i className={"fa fa-" + childButtonIcons[index] + " fa-lg"}></i>
+							</div>
+						)}
+					</div>
+				}
+			</StaggeredMotion>
+		);
+	}
 
 	render() {
 		let {isOpen} = this.state;
 		let mainButtonRotation = isOpen ? {rotate: spring(0, [500, 30])} : {rotate: spring(-135, [500, 30])};
 		return (
 			<div>
-                {this.renderChildButtons()}
+				{this.renderChildButtons()}
 				<Motion style={mainButtonRotation}>
 					{({rotate}) =>
 						<div
 							className="main-button"
 							style={{...this.mainButtonStyles(), transform: `rotate(${rotate}deg)`}}
 							onClick={this.toggleMenu}>
-						{/*Using fa-close instead of fa-plus because fa-plus doesn't center properly*/}
+							{/*Using fa-close instead of fa-plus because fa-plus doesn't center properly*/}
 							<i className="fa fa-close fa-3x"/>
 						</div>
 					}
