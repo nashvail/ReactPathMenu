@@ -114,14 +114,14 @@ class APP extends React.Component {
 		this.setState({ isOpen: false});
 	}
 
-    renderChildButtons() {
-        const {isOpen} = this.state;
-        const targetButtonStyles = range(NUM_CHILDREN).map(i => {
-            return isOpen ? this.finalChildButtonStyles(i) : this.initialChildButtonStyles();
-        });
+	renderChildButtons() {
+		const {isOpen} = this.state;
+		const targetButtonStyles = range(NUM_CHILDREN).map(i => {
+			return isOpen ? this.finalChildButtonStyles(i) : this.initialChildButtonStyles();
+		});
 
-        const scaleMin = this.initialChildButtonStyles().scale.val;
-        const scaleMax = this.finalChildButtonStyles(0).scale.val;
+		const scaleMin = this.initialChildButtonStyles().scale.val;
+		const scaleMax = this.finalChildButtonStyles(0).scale.val;
 
 		//This function returns target styles for each child button in current animation frame
 		//according to actual styles in previous animation frame.
@@ -175,24 +175,24 @@ class APP extends React.Component {
 		// BUTTON NO 1    -----------------------------o-|---------------------------------------------
 		// BUTTON NO 2    -------------------------------|------------------------------------O--------
 		let calculateStylesForNextFrame = prevFrameStyles => {
-            return prevFrameStyles.map((buttonStyleInPreviousFrame, i) => {
+			return prevFrameStyles.map((buttonStyleInPreviousFrame, i) => {
 				//animation always starts from first button
-                if (i === 0) {
-                    return targetButtonStyles[i];
-                }
+				if (i === 0) {
+					return targetButtonStyles[i];
+				}
 
-                const prevButtonScale = prevFrameStyles[i - 1].scale;
-                const shouldApplyTargetStyle = () => {
-                    if (isOpen) {
-                        return prevButtonScale >= scaleMin + OFFSET;
-                    } else {
-                        return prevButtonScale <= scaleMax - OFFSET;
-                    }
-                };
+				const prevButtonScale = prevFrameStyles[i - 1].scale;
+				const shouldApplyTargetStyle = () => {
+					if (isOpen) {
+						return prevButtonScale >= scaleMin + OFFSET;
+					} else {
+						return prevButtonScale <= scaleMax - OFFSET;
+					}
+				};
 
-                return shouldApplyTargetStyle() ? targetButtonStyles[i] : buttonStyleInPreviousFrame;
-            });
-        };
+				return shouldApplyTargetStyle() ? targetButtonStyles[i] : buttonStyleInPreviousFrame;
+			});
+		};
 
         return (
             <StaggeredMotion
