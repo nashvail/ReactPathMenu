@@ -136,7 +136,7 @@ class APP extends React.Component {
 		// For example let's set the OFFSET for 0.3 - it this case border's value for closed buttons will be 0.8.
 		//
 		// All buttons are closed
-		//	              INITIAL-BUTTON-SCALE-(0.5)-----------BORDER-(0.8)------FINAL-BUTTON-SCALE-(1)
+		//                INITIAL-BUTTON-SCALE-(0.5)-----------BORDER-(0.8)------FINAL-BUTTON-SCALE-(1)
 		//                |------------------------------------------|--------------------------------|
 		// BUTTON NO 1    o------------------------------------------|---------------------------------
 		// BUTTON NO 2    o------------------------------------------|---------------------------------
@@ -156,7 +156,7 @@ class APP extends React.Component {
 		//
 		//
 		// All buttons are expanded - in this case border value is 0.7 (OFFSET = 0.3)
-		//	              INITIAL-BUTTON-SCALE-(0.5)---BORDER-(0.7)--------------FINAL-BUTTON-SCALE-(1)
+		//                INITIAL-BUTTON-SCALE-(0.5)---BORDER-(0.7)--------------FINAL-BUTTON-SCALE-(1)
 		//                |------------------------------|--------------------------------------------|
 		// BUTTON NO 1    -------------------------------|--------------------------------------------O
 		// BUTTON NO 2    -------------------------------|--------------------------------------------O
