@@ -17,6 +17,10 @@ const NUM_CHILDREN = 5;
 const M_X = 490;
 const M_Y = 450;
 
+//should be between 0 and 0.5 (its maximum value is difference between scale in finalChildButtonStyles a
+// nd initialChildButtonStyles)
+const OFFSET = 0.4;
+
 const SPRING_CONFIG = [400, 28];
 
 // How far away from the main button does the child buttons go
@@ -118,18 +122,75 @@ class APP extends React.Component {
 
         const scaleMin = this.initialChildButtonStyles().scale.val;
         const scaleMax = this.finalChildButtonStyles(0).scale.val;
-        const offset = 0.2;
 
-        let calculateStylesForNextFrame = prevFrameStyles => {
-            return prevFrameStyles.map((style, i) => {
+		//This function returns target styles for each child button in current animation frame
+		//according to actual styles in previous animation frame.
+		//Each button could have one of two target styles
+		// - defined in initialChildButtonStyles (for collapsed buttons)
+		// - defined in finalChildButtonStyles (for expanded buttons)
+		// To decide which target style should be applied function uses css 'scale' property
+		// for previous button in previous animation frame.
+		// When 'scale' for previous button passes some 'border' which is a simple combination one of
+		// two 'scale' values and some OFFSET the target style for next button should be changed.
+		//
+		// For example let's set the OFFSET for 0.3 - it this case border's value for closed buttons will be 0.8.
+		//
+		// All buttons are closed
+		//	              INITIAL-BUTTON-SCALE-(0.5)-----------BORDER-(0.8)------FINAL-BUTTON-SCALE-(1)
+		//                |------------------------------------------|--------------------------------|
+		// BUTTON NO 1    o------------------------------------------|---------------------------------
+		// BUTTON NO 2    o------------------------------------------|---------------------------------
+		//
+		// When user clicks on menu button no 1 changes its target style according to finalChildButtonStyles method
+		// and starts growing up. In this frame this button doesn't pass the border so target style for button no 2
+		// stays as it was in previous animation frame
+		// BUTTON NO 1    -----------------------------------o-------|---------------------------------
+		// BUTTON NO 2    o------------------------------------------|---------------------------------
+		//
+		//
+		//
+		// (...few frames later)
+		// In previous frame button no 1 passes the border so target style for button no 2 could be changed.
+		// BUTTON NO 1    -------------------------------------------|-o-------------------------------
+		// BUTTON NO 2    -----o-------------------------------------|---------------------------------
+		//
+		//
+		// All buttons are expanded - in this case border value is 0.7 (OFFSET = 0.3)
+		//	              INITIAL-BUTTON-SCALE-(0.5)---BORDER-(0.7)--------------FINAL-BUTTON-SCALE-(1)
+		//                |------------------------------|--------------------------------------------|
+		// BUTTON NO 1    -------------------------------|--------------------------------------------O
+		// BUTTON NO 2    -------------------------------|--------------------------------------------O
+		//
+		// When user clicks on menu button no 1 changes its target style according to initialChildButtonStyles method
+		// and starts shrinking down. In this frame this button doesn't pass the border so target style for button no 2
+		// stays as it was defined in finalChildButtonStyles method
+		// BUTTON NO 1    -------------------------------|------------------------------------O--------
+		// BUTTON NO 2    -------------------------------|--------------------------------------------O
+		//
+		//
+		//
+		// (...few frames later)
+		// In previous frame button no 1 passes the border so target style for button no 2 could be changed
+		// and this button starts to animate to its default state.
+		// BUTTON NO 1    -----------------------------o-|---------------------------------------------
+		// BUTTON NO 2    -------------------------------|------------------------------------O--------
+		let calculateStylesForNextFrame = prevFrameStyles => {
+            return prevFrameStyles.map((buttonStyleInPreviousFrame, i) => {
+				//animation always starts from first button
                 if (i === 0) {
                     return targetButtonStyles[i];
                 }
 
                 const prevButtonScale = prevFrameStyles[i - 1].scale;
-                const shouldApplyTargetStyle = isOpen ? prevButtonScale >= scaleMin + offset : prevButtonScale <= scaleMax - offset;
+                const shouldApplyTargetStyle = () => {
+                    if (isOpen) {
+                        return prevButtonScale >= scaleMin + OFFSET;
+                    } else {
+                        return prevButtonScale <= scaleMax - OFFSET;
+                    }
+                };
 
-                return shouldApplyTargetStyle ? targetButtonStyles[i] : style;
+                return shouldApplyTargetStyle() ? targetButtonStyles[i] : buttonStyleInPreviousFrame;
             });
         };
 
@@ -144,11 +205,11 @@ class APP extends React.Component {
                                 className="child-button"
                                 key={index}
                                 style={{
-								    left: left,
-								    height: height,
-								    top: top,
+								    left,
+								    height,
+								    top,
 								    transform: `rotate(${rotate}deg) scale(${scale})`,
-								    width: width
+								    width
 							    }}
                             >
                                 <i className={"fa fa-" + childButtonIcons[index] + " fa-lg"}></i>
