@@ -16675,15 +16675,21 @@
 	 * @typechecks
 	 */
 
+	/* eslint-disable fb-www/typeof-undefined */
+
 	/**
 	 * Same as document.activeElement but wraps in a try-catch block. In IE it is
 	 * not safe to call document.activeElement if there is nothing focused.
 	 *
-	 * The activeElement will be null only if the document body is not yet defined.
+	 * The activeElement will be null only if the document or document body is not
+	 * yet defined.
 	 */
-	"use strict";
+	'use strict';
 
 	function getActiveElement() /*?DOMElement*/{
+	  if (typeof document === 'undefined') {
+	    return null;
+	  }
 	  try {
 	    return document.activeElement || document.body;
 	  } catch (e) {
@@ -18682,7 +18688,7 @@
 
 	'use strict';
 
-	module.exports = '0.14.5';
+	module.exports = '0.14.6';
 
 /***/ },
 /* 147 */
@@ -19661,7 +19667,7 @@
 
 	var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
 
-	var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
 	var _react = __webpack_require__(1);
 
@@ -19698,6 +19704,10 @@
 	var M_X = 490;
 	var M_Y = 450;
 
+	//should be between 0 and 0.5 (its maximum value is difference between scale in finalChildButtonStyles a
+	// nd initialChildButtonStyles)
+	var OFFSET = 0.4;
+
 	var SPRING_CONFIG = [400, 28];
 
 	// How far away from the main button does the child buttons go
@@ -19726,7 +19736,7 @@
 		};
 	}
 
-	var APP = (function (_React$Component) {
+	var APP = function (_React$Component) {
 		_inherits(APP, _React$Component);
 
 		function APP(props) {
@@ -19742,20 +19752,14 @@
 			// Bind this to the functions
 			_this.toggleMenu = _this.toggleMenu.bind(_this);
 			_this.closeMenu = _this.closeMenu.bind(_this);
-			_this.animateChildButtonsWithDelay = _this.animateChildButtonsWithDelay.bind(_this);
 			return _this;
 		}
 
 		_createClass(APP, [{
 			key: 'componentDidMount',
 			value: function componentDidMount() {
-				var _this2 = this;
-
 				window.addEventListener('click', this.closeMenu);
 				var childButtons = [];
-				(0, _lodash2.default)(NUM_CHILDREN).forEach(function (index) {
-					childButtons.push(_this2.renderChildButton(index));
-				});
 
 				this.setState({ childButtons: childButtons.slice(0) });
 			}
@@ -19807,57 +19811,133 @@
 				this.setState({
 					isOpen: !isOpen
 				});
-
-				this.animateChildButtonsWithDelay();
 			}
 		}, {
 			key: 'closeMenu',
 			value: function closeMenu() {
 				this.setState({ isOpen: false });
-				this.animateChildButtonsWithDelay();
 			}
 		}, {
-			key: 'animateChildButtonsWithDelay',
-			value: function animateChildButtonsWithDelay() {
-				var _this3 = this;
+			key: 'renderChildButtons',
+			value: function renderChildButtons() {
+				var _this2 = this;
 
-				(0, _lodash2.default)(NUM_CHILDREN).forEach(function (index) {
-					var childButtons = _this3.state.childButtons;
-
-					setTimeout(function () {
-						childButtons[NUM_CHILDREN - index - 1] = _this3.renderChildButton(NUM_CHILDREN - index - 1);
-						_this3.setState({ childButtons: childButtons.slice(0) });
-					}, index * 50);
-				});
-			}
-		}, {
-			key: 'renderChildButton',
-			value: function renderChildButton(index) {
 				var isOpen = this.state.isOpen;
 
-				var style = isOpen ? this.finalChildButtonStyles(index) : this.initialChildButtonStyles();
+				var targetButtonStyles = (0, _lodash2.default)(NUM_CHILDREN).map(function (i) {
+					return isOpen ? _this2.finalChildButtonStyles(i) : _this2.initialChildButtonStyles();
+				});
+
+				var scaleMin = this.initialChildButtonStyles().scale.val;
+				var scaleMax = this.finalChildButtonStyles(0).scale.val;
+
+				//This function returns target styles for each child button in current animation frame
+				//according to actual styles in previous animation frame.
+				//Each button could have one of two target styles
+				// - defined in initialChildButtonStyles (for collapsed buttons)
+				// - defined in finalChildButtonStyles (for expanded buttons)
+				// To decide which target style should be applied function uses css 'scale' property
+				// for previous button in previous animation frame.
+				// When 'scale' for previous button passes some 'border' which is a simple combination one of
+				// two 'scale' values and some OFFSET the target style for next button should be changed.
+				//
+				// For example let's set the OFFSET for 0.3 - it this case border's value for closed buttons will be 0.8.
+				//
+				// All buttons are closed
+				//                INITIAL-BUTTON-SCALE-(0.5)-----------BORDER-(0.8)------FINAL-BUTTON-SCALE-(1)
+				//                |------------------------------------------|--------------------------------|
+				// BUTTON NO 1    o------------------------------------------|---------------------------------
+				// BUTTON NO 2    o------------------------------------------|---------------------------------
+				//
+				// When user clicks on menu button no 1 changes its target style according to finalChildButtonStyles method
+				// and starts growing up. In this frame this button doesn't pass the border so target style for button no 2
+				// stays as it was in previous animation frame
+				// BUTTON NO 1    -----------------------------------o-------|---------------------------------
+				// BUTTON NO 2    o------------------------------------------|---------------------------------
+				//
+				//
+				//
+				// (...few frames later)
+				// In previous frame button no 1 passes the border so target style for button no 2 could be changed.
+				// BUTTON NO 1    -------------------------------------------|-o-------------------------------
+				// BUTTON NO 2    -----o-------------------------------------|---------------------------------
+				//
+				//
+				// All buttons are expanded - in this case border value is 0.7 (OFFSET = 0.3)
+				//                INITIAL-BUTTON-SCALE-(0.5)---BORDER-(0.7)--------------FINAL-BUTTON-SCALE-(1)
+				//                |------------------------------|--------------------------------------------|
+				// BUTTON NO 1    -------------------------------|--------------------------------------------O
+				// BUTTON NO 2    -------------------------------|--------------------------------------------O
+				//
+				// When user clicks on menu button no 1 changes its target style according to initialChildButtonStyles method
+				// and starts shrinking down. In this frame this button doesn't pass the border so target style for button no 2
+				// stays as it was defined in finalChildButtonStyles method
+				// BUTTON NO 1    -------------------------------|------------------------------------O--------
+				// BUTTON NO 2    -------------------------------|--------------------------------------------O
+				//
+				//
+				//
+				// (...few frames later)
+				// In previous frame button no 1 passes the border so target style for button no 2 could be changed
+				// and this button starts to animate to its default state.
+				// BUTTON NO 1    -----------------------------o-|---------------------------------------------
+				// BUTTON NO 2    -------------------------------|------------------------------------O--------
+				var calculateStylesForNextFrame = function calculateStylesForNextFrame(prevFrameStyles) {
+					prevFrameStyles = isOpen ? prevFrameStyles : prevFrameStyles.reverse();
+
+					var nextFrameTargetStyles = prevFrameStyles.map(function (buttonStyleInPreviousFrame, i) {
+						//animation always starts from first button
+						if (i === 0) {
+							return targetButtonStyles[i];
+						}
+
+						var prevButtonScale = prevFrameStyles[i - 1].scale;
+						var shouldApplyTargetStyle = function shouldApplyTargetStyle() {
+							if (isOpen) {
+								return prevButtonScale >= scaleMin + OFFSET;
+							} else {
+								return prevButtonScale <= scaleMax - OFFSET;
+							}
+						};
+
+						return shouldApplyTargetStyle() ? targetButtonStyles[i] : buttonStyleInPreviousFrame;
+					});
+
+					return isOpen ? nextFrameTargetStyles : nextFrameTargetStyles.reverse();
+				};
+
 				return _react2.default.createElement(
-					_reactMotion.Motion,
-					{ style: style, key: index },
-					function (_ref) {
-						var width = _ref.width;
-						var height = _ref.height;
-						var top = _ref.top;
-						var left = _ref.left;
-						var rotate = _ref.rotate;
-						var scale = _ref.scale;
+					_reactMotion.StaggeredMotion,
+					{
+						defaultStyles: targetButtonStyles,
+						styles: calculateStylesForNextFrame },
+					function (interpolatedStyles) {
 						return _react2.default.createElement(
 							'div',
-							{
-								className: 'child-button',
-								style: {
-									width: width,
-									height: height,
-									top: top,
-									left: left,
-									transform: 'rotate(' + rotate + 'deg) scale(' + scale + ')'
-								} },
-							_react2.default.createElement('i', { className: "fa fa-" + childButtonIcons[index] + " fa-lg" })
+							null,
+							interpolatedStyles.map(function (_ref, index) {
+								var height = _ref.height;
+								var left = _ref.left;
+								var rotate = _ref.rotate;
+								var scale = _ref.scale;
+								var top = _ref.top;
+								var width = _ref.width;
+								return _react2.default.createElement(
+									'div',
+									{
+										className: 'child-button',
+										key: index,
+										style: {
+											left: left,
+											height: height,
+											top: top,
+											transform: 'rotate(' + rotate + 'deg) scale(' + scale + ')',
+											width: width
+										}
+									},
+									_react2.default.createElement('i', { className: "fa fa-" + childButtonIcons[index] + " fa-lg" })
+								);
+							})
 						);
 					}
 				);
@@ -19865,19 +19945,15 @@
 		}, {
 			key: 'render',
 			value: function render() {
-				var _this4 = this;
+				var _this3 = this;
 
-				var _state = this.state;
-				var isOpen = _state.isOpen;
-				var childButtons = _state.childButtons;
+				var isOpen = this.state.isOpen;
 
 				var mainButtonRotation = isOpen ? { rotate: (0, _reactMotion.spring)(0, [500, 30]) } : { rotate: (0, _reactMotion.spring)(-135, [500, 30]) };
 				return _react2.default.createElement(
 					'div',
 					null,
-					childButtons.map(function (button, index) {
-						return childButtons[index];
-					}),
+					this.renderChildButtons(),
 					_react2.default.createElement(
 						_reactMotion.Motion,
 						{ style: mainButtonRotation },
@@ -19887,8 +19963,8 @@
 								'div',
 								{
 									className: 'main-button',
-									style: _extends({}, _this4.mainButtonStyles(), { transform: 'rotate(' + rotate + 'deg)' }),
-									onClick: _this4.toggleMenu },
+									style: _extends({}, _this3.mainButtonStyles(), { transform: 'rotate(' + rotate + 'deg)' }),
+									onClick: _this3.toggleMenu },
 								_react2.default.createElement('i', { className: 'fa fa-close fa-3x' })
 							);
 						}
@@ -19898,7 +19974,7 @@
 		}]);
 
 		return APP;
-	})(_react2.default.Component);
+	}(_react2.default.Component);
 
 	;
 
@@ -21147,105 +21223,69 @@
 
 /***/ },
 /* 176 */
-/***/ function(module, exports, __webpack_require__) {
-
-	/**
-	 * lodash 3.0.1 (Custom Build) <https://lodash.com/>
-	 * Build: `lodash modern modularize exports="npm" -o ./`
-	 * Copyright 2012-2015 The Dojo Foundation <http://dojofoundation.org/>
-	 * Based on Underscore.js 1.8.3 <http://underscorejs.org/LICENSE>
-	 * Copyright 2009-2015 Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors
-	 * Available under MIT license <https://lodash.com/license>
-	 */
-	var isIterateeCall = __webpack_require__(177);
-
-	/* Native method references for those with the same name as other `lodash` methods. */
-	var nativeCeil = Math.ceil,
-	    nativeMax = Math.max;
-
-	/**
-	 * Creates an array of numbers (positive and/or negative) progressing from
-	 * `start` up to, but not including, `end`. If `end` is not specified it is
-	 * set to `start` with `start` then set to `0`. If `end` is less than `start`
-	 * a zero-length range is created unless a negative `step` is specified.
-	 *
-	 * @static
-	 * @memberOf _
-	 * @category Utility
-	 * @param {number} [start=0] The start of the range.
-	 * @param {number} end The end of the range.
-	 * @param {number} [step=1] The value to increment or decrement by.
-	 * @returns {Array} Returns the new array of numbers.
-	 * @example
-	 *
-	 * _.range(4);
-	 * // => [0, 1, 2, 3]
-	 *
-	 * _.range(1, 5);
-	 * // => [1, 2, 3, 4]
-	 *
-	 * _.range(0, 20, 5);
-	 * // => [0, 5, 10, 15]
-	 *
-	 * _.range(0, -4, -1);
-	 * // => [0, -1, -2, -3]
-	 *
-	 * _.range(1, 4, 0);
-	 * // => [1, 1, 1]
-	 *
-	 * _.range(0);
-	 * // => []
-	 */
-	function range(start, end, step) {
-	  if (step && isIterateeCall(start, end, step)) {
-	    end = step = undefined;
-	  }
-	  start = +start || 0;
-	  step = step == null ? 1 : (+step || 0);
-
-	  if (end == null) {
-	    end = start;
-	    start = 0;
-	  } else {
-	    end = +end || 0;
-	  }
-	  // Use `Array(length)` so engines like Chakra and V8 avoid slower modes.
-	  // See https://youtu.be/XAqIpGU8ZZk#t=17m25s for more details.
-	  var index = -1,
-	      length = nativeMax(nativeCeil((end - start) / (step || 1)), 0),
-	      result = Array(length);
-
-	  while (++index < length) {
-	    result[index] = start;
-	    start += step;
-	  }
-	  return result;
-	}
-
-	module.exports = range;
-
-
-/***/ },
-/* 177 */
 /***/ function(module, exports) {
 
-	/**
-	 * lodash 3.0.9 (Custom Build) <https://lodash.com/>
-	 * Build: `lodash modern modularize exports="npm" -o ./`
-	 * Copyright 2012-2015 The Dojo Foundation <http://dojofoundation.org/>
+	/* WEBPACK VAR INJECTION */(function(global) {/**
+	 * lodash 3.1.0 (Custom Build) <https://lodash.com/>
+	 * Build: `lodash modularize exports="npm" -o ./`
+	 * Copyright 2012-2016 The Dojo Foundation <http://dojofoundation.org/>
 	 * Based on Underscore.js 1.8.3 <http://underscorejs.org/LICENSE>
-	 * Copyright 2009-2015 Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors
+	 * Copyright 2009-2016 Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors
 	 * Available under MIT license <https://lodash.com/license>
 	 */
 
+	/** Used as references for various `Number` constants. */
+	var MAX_SAFE_INTEGER = 9007199254740991,
+	    NAN = 0 / 0;
+
+	/** `Object#toString` result references. */
+	var funcTag = '[object Function]',
+	    genTag = '[object GeneratorFunction]';
+
+	/** Used to match leading and trailing whitespace. */
+	var reTrim = /^\s+|\s+$/g;
+
+	/** Used to detect bad signed hexadecimal string values. */
+	var reIsBadHex = /^[-+]0x[0-9a-f]+$/i;
+
+	/** Used to detect binary string values. */
+	var reIsBinary = /^0b[01]+$/i;
+
+	/** Used to detect octal string values. */
+	var reIsOctal = /^0o[0-7]+$/i;
+
 	/** Used to detect unsigned integer values. */
-	var reIsUint = /^\d+$/;
+	var reIsUint = /^(?:0|[1-9]\d*)$/;
+
+	/** Built-in method references without a dependency on `global`. */
+	var freeParseInt = parseInt;
 
 	/**
-	 * Used as the [maximum length](https://people.mozilla.org/~jorendorff/es6-draft.html#sec-number.max_safe_integer)
-	 * of an array-like value.
+	 * Checks if `value` is a valid array-like index.
+	 *
+	 * @private
+	 * @param {*} value The value to check.
+	 * @param {number} [length=MAX_SAFE_INTEGER] The upper bounds of a valid index.
+	 * @returns {boolean} Returns `true` if `value` is a valid index, else `false`.
 	 */
-	var MAX_SAFE_INTEGER = 9007199254740991;
+	function isIndex(value, length) {
+	  value = (typeof value == 'number' || reIsUint.test(value)) ? +value : -1;
+	  length = length == null ? MAX_SAFE_INTEGER : length;
+	  return value > -1 && value % 1 == 0 && value < length;
+	}
+
+	/** Used for built-in method references. */
+	var objectProto = global.Object.prototype;
+
+	/**
+	 * Used to resolve the [`toStringTag`](http://ecma-international.org/ecma-262/6.0/#sec-object.prototype.tostring)
+	 * of values.
+	 */
+	var objectToString = objectProto.toString;
+
+	/* Built-in method references for those with the same name as other `lodash` methods. */
+	var nativeCeil = Math.ceil,
+	    nativeMax = Math.max;
 
 	/**
 	 * The base implementation of `_.property` without support for deep paths.
@@ -21261,6 +21301,55 @@
 	}
 
 	/**
+	 * The base implementation of `_.range` and `_.rangeRight` which doesn't
+	 * coerce arguments to numbers.
+	 *
+	 * @private
+	 * @param {number} start The start of the range.
+	 * @param {number} end The end of the range.
+	 * @param {number} step The value to increment or decrement by.
+	 * @param {boolean} [fromRight] Specify iterating from right to left.
+	 * @returns {Array} Returns the new array of numbers.
+	 */
+	function baseRange(start, end, step, fromRight) {
+	  var index = -1,
+	      length = nativeMax(nativeCeil((end - start) / (step || 1)), 0),
+	      result = Array(length);
+
+	  while (length--) {
+	    result[fromRight ? length : ++index] = start;
+	    start += step;
+	  }
+	  return result;
+	}
+
+	/**
+	 * Creates a `_.range` or `_.rangeRight` function.
+	 *
+	 * @private
+	 * @param {boolean} [fromRight] Specify iterating from right to left.
+	 * @returns {Function} Returns the new range function.
+	 */
+	function createRange(fromRight) {
+	  return function(start, end, step) {
+	    if (step && typeof step != 'number' && isIterateeCall(start, end, step)) {
+	      end = step = undefined;
+	    }
+	    // Ensure the sign of `-0` is preserved.
+	    start = toNumber(start);
+	    start = start === start ? start : 0;
+	    if (end === undefined) {
+	      end = start;
+	      start = 0;
+	    } else {
+	      end = toNumber(end) || 0;
+	    }
+	    step = step === undefined ? (start < end ? 1 : -1) : (toNumber(step) || 0);
+	    return baseRange(start, end, step, fromRight);
+	  };
+	}
+
+	/**
 	 * Gets the "length" property value of `object`.
 	 *
 	 * **Note:** This function is used to avoid a [JIT bug](https://bugs.webkit.org/show_bug.cgi?id=142792)
@@ -21271,31 +21360,6 @@
 	 * @returns {*} Returns the "length" value.
 	 */
 	var getLength = baseProperty('length');
-
-	/**
-	 * Checks if `value` is array-like.
-	 *
-	 * @private
-	 * @param {*} value The value to check.
-	 * @returns {boolean} Returns `true` if `value` is array-like, else `false`.
-	 */
-	function isArrayLike(value) {
-	  return value != null && isLength(getLength(value));
-	}
-
-	/**
-	 * Checks if `value` is a valid array-like index.
-	 *
-	 * @private
-	 * @param {*} value The value to check.
-	 * @param {number} [length=MAX_SAFE_INTEGER] The upper bounds of a valid index.
-	 * @returns {boolean} Returns `true` if `value` is a valid index, else `false`.
-	 */
-	function isIndex(value, length) {
-	  value = (typeof value == 'number' || reIsUint.test(value)) ? +value : -1;
-	  length = length == null ? MAX_SAFE_INTEGER : length;
-	  return value > -1 && value % 1 == 0 && value < length;
-	}
 
 	/**
 	 * Checks if the provided arguments are from an iteratee call.
@@ -21314,20 +21378,122 @@
 	  if (type == 'number'
 	      ? (isArrayLike(object) && isIndex(index, object.length))
 	      : (type == 'string' && index in object)) {
-	    var other = object[index];
-	    return value === value ? (value === other) : (other !== other);
+	    return eq(object[index], value);
 	  }
 	  return false;
 	}
 
 	/**
+	 * Performs a [`SameValueZero`](http://ecma-international.org/ecma-262/6.0/#sec-samevaluezero)
+	 * comparison between two values to determine if they are equivalent.
+	 *
+	 * @static
+	 * @memberOf _
+	 * @category Lang
+	 * @param {*} value The value to compare.
+	 * @param {*} other The other value to compare.
+	 * @returns {boolean} Returns `true` if the values are equivalent, else `false`.
+	 * @example
+	 *
+	 * var object = { 'user': 'fred' };
+	 * var other = { 'user': 'fred' };
+	 *
+	 * _.eq(object, object);
+	 * // => true
+	 *
+	 * _.eq(object, other);
+	 * // => false
+	 *
+	 * _.eq('a', 'a');
+	 * // => true
+	 *
+	 * _.eq('a', Object('a'));
+	 * // => false
+	 *
+	 * _.eq(NaN, NaN);
+	 * // => true
+	 */
+	function eq(value, other) {
+	  return value === other || (value !== value && other !== other);
+	}
+
+	/**
+	 * Checks if `value` is array-like. A value is considered array-like if it's
+	 * not a function and has a `value.length` that's an integer greater than or
+	 * equal to `0` and less than or equal to `Number.MAX_SAFE_INTEGER`.
+	 *
+	 * @static
+	 * @memberOf _
+	 * @type Function
+	 * @category Lang
+	 * @param {*} value The value to check.
+	 * @returns {boolean} Returns `true` if `value` is array-like, else `false`.
+	 * @example
+	 *
+	 * _.isArrayLike([1, 2, 3]);
+	 * // => true
+	 *
+	 * _.isArrayLike(document.body.children);
+	 * // => true
+	 *
+	 * _.isArrayLike('abc');
+	 * // => true
+	 *
+	 * _.isArrayLike(_.noop);
+	 * // => false
+	 */
+	function isArrayLike(value) {
+	  return value != null &&
+	    !(typeof value == 'function' && isFunction(value)) && isLength(getLength(value));
+	}
+
+	/**
+	 * Checks if `value` is classified as a `Function` object.
+	 *
+	 * @static
+	 * @memberOf _
+	 * @category Lang
+	 * @param {*} value The value to check.
+	 * @returns {boolean} Returns `true` if `value` is correctly classified, else `false`.
+	 * @example
+	 *
+	 * _.isFunction(_);
+	 * // => true
+	 *
+	 * _.isFunction(/abc/);
+	 * // => false
+	 */
+	function isFunction(value) {
+	  // The use of `Object#toString` avoids issues with the `typeof` operator
+	  // in Safari 8 which returns 'object' for typed array constructors, and
+	  // PhantomJS 1.9 which returns 'function' for `NodeList` instances.
+	  var tag = isObject(value) ? objectToString.call(value) : '';
+	  return tag == funcTag || tag == genTag;
+	}
+
+	/**
 	 * Checks if `value` is a valid array-like length.
 	 *
-	 * **Note:** This function is based on [`ToLength`](https://people.mozilla.org/~jorendorff/es6-draft.html#sec-tolength).
+	 * **Note:** This function is loosely based on [`ToLength`](http://ecma-international.org/ecma-262/6.0/#sec-tolength).
 	 *
-	 * @private
+	 * @static
+	 * @memberOf _
+	 * @category Lang
 	 * @param {*} value The value to check.
 	 * @returns {boolean} Returns `true` if `value` is a valid length, else `false`.
+	 * @example
+	 *
+	 * _.isLength(3);
+	 * // => true
+	 *
+	 * _.isLength(Number.MIN_VALUE);
+	 * // => false
+	 *
+	 * _.isLength(Infinity);
+	 * // => false
+	 *
+	 * _.isLength('3');
+	 * // => false
 	 */
 	function isLength(value) {
 	  return typeof value == 'number' && value > -1 && value % 1 == 0 && value <= MAX_SAFE_INTEGER;
@@ -21350,7 +21516,10 @@
 	 * _.isObject([1, 2, 3]);
 	 * // => true
 	 *
-	 * _.isObject(1);
+	 * _.isObject(_.noop);
+	 * // => true
+	 *
+	 * _.isObject(null);
 	 * // => false
 	 */
 	function isObject(value) {
@@ -21360,8 +21529,88 @@
 	  return !!value && (type == 'object' || type == 'function');
 	}
 
-	module.exports = isIterateeCall;
+	/**
+	 * Converts `value` to a number.
+	 *
+	 * @static
+	 * @memberOf _
+	 * @category Lang
+	 * @param {*} value The value to process.
+	 * @returns {number} Returns the number.
+	 * @example
+	 *
+	 * _.toNumber(3);
+	 * // => 3
+	 *
+	 * _.toNumber(Number.MIN_VALUE);
+	 * // => 5e-324
+	 *
+	 * _.toNumber(Infinity);
+	 * // => Infinity
+	 *
+	 * _.toNumber('3');
+	 * // => 3
+	 */
+	function toNumber(value) {
+	  if (isObject(value)) {
+	    var other = isFunction(value.valueOf) ? value.valueOf() : value;
+	    value = isObject(other) ? (other + '') : other;
+	  }
+	  if (typeof value != 'string') {
+	    return value === 0 ? value : +value;
+	  }
+	  value = value.replace(reTrim, '');
+	  var isBinary = reIsBinary.test(value);
+	  return (isBinary || reIsOctal.test(value))
+	    ? freeParseInt(value.slice(2), isBinary ? 2 : 8)
+	    : (reIsBadHex.test(value) ? NAN : +value);
+	}
 
+	/**
+	 * Creates an array of numbers (positive and/or negative) progressing from
+	 * `start` up to, but not including, `end`. A step of `-1` is used if a negative
+	 * `start` is specified without an `end` or `step`. If `end` is not specified
+	 * it's set to `start` with `start` then set to `0`.  If `end` is less than
+	 * `start` a zero-length range is created unless a negative `step` is specified.
+	 *
+	 * **Note:** JavaScript follows the IEEE-754 standard for resolving
+	 * floating-point values which can produce unexpected results.
+	 *
+	 * @static
+	 * @memberOf _
+	 * @category Util
+	 * @param {number} [start=0] The start of the range.
+	 * @param {number} end The end of the range.
+	 * @param {number} [step=1] The value to increment or decrement by.
+	 * @returns {Array} Returns the new array of numbers.
+	 * @example
+	 *
+	 * _.range(4);
+	 * // => [0, 1, 2, 3]
+	 *
+	 * _.range(-4);
+	 * // => [0, -1, -2, -3]
+	 *
+	 * _.range(1, 5);
+	 * // => [1, 2, 3, 4]
+	 *
+	 * _.range(0, 20, 5);
+	 * // => [0, 5, 10, 15]
+	 *
+	 * _.range(0, -4, -1);
+	 * // => [0, -1, -2, -3]
+	 *
+	 * _.range(1, 4, 0);
+	 * // => [1, 1, 1]
+	 *
+	 * _.range(0);
+	 * // => []
+	 */
+	var range = createRange();
+
+	module.exports = range;
+
+	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }())))
 
 /***/ }
 /******/ ]);

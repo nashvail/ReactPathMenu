@@ -1,7 +1,7 @@
 'use strict';
 import React from 'react';
 import ReactDOM from 'react-dom';
-import {Motion, spring} from 'react-motion';
+import {Motion, StaggeredMotion, spring} from 'react-motion';
 import range from 'lodash.range';
 
 // Components 
@@ -16,6 +16,10 @@ const NUM_CHILDREN = 5;
 // Hard code the position values of the mainButton
 const M_X = 490;
 const M_Y = 450;
+
+//should be between 0 and 0.5 (its maximum value is difference between scale in finalChildButtonStyles a
+// nd initialChildButtonStyles)
+const OFFSET = 0.4;
 
 const SPRING_CONFIG = [400, 28];
 
@@ -47,25 +51,21 @@ function finalChildDeltaPositions(index) {
 
 class APP extends React.Component {
 	constructor(props) {
-		super(props);	
+		super(props);
 
 		this.state = {
 			isOpen: false,
 			childButtons: []
 		};
 
-		// Bind this to the functions 
+		// Bind this to the functions
 		this.toggleMenu = this.toggleMenu.bind(this);
 		this.closeMenu = this.closeMenu.bind(this);
-		this.animateChildButtonsWithDelay = this.animateChildButtonsWithDelay.bind(this);
 	}
 
 	componentDidMount() {
 		window.addEventListener('click', this.closeMenu);
 		let childButtons = [];
-		range(NUM_CHILDREN).forEach(index => {
-			childButtons.push(this.renderChildButton(index));
-		});
 
 		this.setState({childButtons: childButtons.slice(0)});
 	}
@@ -108,69 +108,143 @@ class APP extends React.Component {
 		this.setState({
 			isOpen: !isOpen
 		});
-
-		this.animateChildButtonsWithDelay();
 	}
 
 	closeMenu() {
 		this.setState({ isOpen: false});
-		this.animateChildButtonsWithDelay();
 	}
 
-	animateChildButtonsWithDelay() {
-		range(NUM_CHILDREN).forEach((index) => {
-			let {childButtons} = this.state;
-			setTimeout(() => {
-				childButtons[NUM_CHILDREN - index - 1]	= this.renderChildButton(NUM_CHILDREN - index - 1);
-				this.setState({childButtons: childButtons.slice(0)});
-			}, index * 50);
+	renderChildButtons() {
+		const {isOpen} = this.state;
+		const targetButtonStyles = range(NUM_CHILDREN).map(i => {
+			return isOpen ? this.finalChildButtonStyles(i) : this.initialChildButtonStyles();
 		});
-	}
 
-	renderChildButton(index) {
-		let {isOpen} = this.state;
-		let style = isOpen ? this.finalChildButtonStyles(index) : this.initialChildButtonStyles() ;
+		const scaleMin = this.initialChildButtonStyles().scale.val;
+		const scaleMax = this.finalChildButtonStyles(0).scale.val;
+
+		//This function returns target styles for each child button in current animation frame
+		//according to actual styles in previous animation frame.
+		//Each button could have one of two target styles
+		// - defined in initialChildButtonStyles (for collapsed buttons)
+		// - defined in finalChildButtonStyles (for expanded buttons)
+		// To decide which target style should be applied function uses css 'scale' property
+		// for previous button in previous animation frame.
+		// When 'scale' for previous button passes some 'border' which is a simple combination one of
+		// two 'scale' values and some OFFSET the target style for next button should be changed.
+		//
+		// For example let's set the OFFSET for 0.3 - it this case border's value for closed buttons will be 0.8.
+		//
+		// All buttons are closed
+		//                INITIAL-BUTTON-SCALE-(0.5)-----------BORDER-(0.8)------FINAL-BUTTON-SCALE-(1)
+		//                |------------------------------------------|--------------------------------|
+		// BUTTON NO 1    o------------------------------------------|---------------------------------
+		// BUTTON NO 2    o------------------------------------------|---------------------------------
+		//
+		// When user clicks on menu button no 1 changes its target style according to finalChildButtonStyles method
+		// and starts growing up. In this frame this button doesn't pass the border so target style for button no 2
+		// stays as it was in previous animation frame
+		// BUTTON NO 1    -----------------------------------o-------|---------------------------------
+		// BUTTON NO 2    o------------------------------------------|---------------------------------
+		//
+		//
+		//
+		// (...few frames later)
+		// In previous frame button no 1 passes the border so target style for button no 2 could be changed.
+		// BUTTON NO 1    -------------------------------------------|-o-------------------------------
+		// BUTTON NO 2    -----o-------------------------------------|---------------------------------
+		//
+		//
+		// All buttons are expanded - in this case border value is 0.7 (OFFSET = 0.3)
+		//                INITIAL-BUTTON-SCALE-(0.5)---BORDER-(0.7)--------------FINAL-BUTTON-SCALE-(1)
+		//                |------------------------------|--------------------------------------------|
+		// BUTTON NO 1    -------------------------------|--------------------------------------------O
+		// BUTTON NO 2    -------------------------------|--------------------------------------------O
+		//
+		// When user clicks on menu button no 1 changes its target style according to initialChildButtonStyles method
+		// and starts shrinking down. In this frame this button doesn't pass the border so target style for button no 2
+		// stays as it was defined in finalChildButtonStyles method
+		// BUTTON NO 1    -------------------------------|------------------------------------O--------
+		// BUTTON NO 2    -------------------------------|--------------------------------------------O
+		//
+		//
+		//
+		// (...few frames later)
+		// In previous frame button no 1 passes the border so target style for button no 2 could be changed
+		// and this button starts to animate to its default state.
+		// BUTTON NO 1    -----------------------------o-|---------------------------------------------
+		// BUTTON NO 2    -------------------------------|------------------------------------O--------
+		let calculateStylesForNextFrame = prevFrameStyles => {
+			prevFrameStyles = isOpen ? prevFrameStyles : prevFrameStyles.reverse();
+
+			let nextFrameTargetStyles =  prevFrameStyles.map((buttonStyleInPreviousFrame, i) => {
+				//animation always starts from first button
+				if (i === 0) {
+					return targetButtonStyles[i];
+				}
+
+				const prevButtonScale = prevFrameStyles[i - 1].scale;
+				const shouldApplyTargetStyle = () => {
+					if (isOpen) {
+						return prevButtonScale >= scaleMin + OFFSET;
+					} else {
+						return prevButtonScale <= scaleMax - OFFSET;
+					}
+				};
+
+				return shouldApplyTargetStyle() ? targetButtonStyles[i] : buttonStyleInPreviousFrame;
+			});
+
+			return isOpen ? nextFrameTargetStyles : nextFrameTargetStyles.reverse();
+		};
+
 		return (
-			<Motion style={style} key={index}>
-				{({width, height, top, left, rotate, scale}) => 
-					<div	
-						className="child-button"
-						style={{
-							width: width,
-							height: height,
-							top: top,
-							left: left,
-							transform: `rotate(${rotate}deg) scale(${scale})`
-						}}>
-						<i className={"fa fa-" + childButtonIcons[index] + " fa-lg"}></i>
+			<StaggeredMotion
+				defaultStyles={targetButtonStyles}
+				styles={calculateStylesForNextFrame}>
+				{interpolatedStyles =>
+					<div>
+						{interpolatedStyles.map(({height, left, rotate, scale, top, width}, index) =>
+							<div
+								className="child-button"
+								key={index}
+								style={{
+									left,
+									height,
+									top,
+									transform: `rotate(${rotate}deg) scale(${scale})`,
+									width
+								}}
+							>
+								<i className={"fa fa-" + childButtonIcons[index] + " fa-lg"}></i>
+							</div>
+						)}
 					</div>
 				}
-			</Motion>
+			</StaggeredMotion>
 		);
 	}
 
 	render() {
-		let {isOpen, childButtons} = this.state;
+		let {isOpen} = this.state;
 		let mainButtonRotation = isOpen ? {rotate: spring(0, [500, 30])} : {rotate: spring(-135, [500, 30])};
 		return (
 			<div>
-				{childButtons.map( (button, index) => {
-					return childButtons[index];
-				})}
+				{this.renderChildButtons()}
 				<Motion style={mainButtonRotation}>
-					{({rotate}) => 
-						<div 
+					{({rotate}) =>
+						<div
 							className="main-button"
 							style={{...this.mainButtonStyles(), transform: `rotate(${rotate}deg)`}}
 							onClick={this.toggleMenu}>
-						{/*Using fa-close instead of fa-plus because fa-plus doesn't center properly*/}
+							{/*Using fa-close instead of fa-plus because fa-plus doesn't center properly*/}
 							<i className="fa fa-close fa-3x"/>
 						</div>
 					}
 				</Motion>
 			</div>
 		);
-	}	
+	}
 };
 
 module.exports = APP;
