@@ -8,6 +8,8 @@
 Demo
 =====
 
+https://rawgit.com/nashvail/ReactPathMenu/staggered-motion/public/index.html
+
 ![](http://s1.postimg.org/wgzpb1l27/final_Demo_One.gif)
 
 To run 
