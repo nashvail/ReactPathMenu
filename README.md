@@ -3,7 +3,7 @@
 [Read the tutorial here.](https://medium.com/@nashvail/a-gentle-introduction-to-react-motion-dc50dd9f2459#.bgck7roe9)
 
 * `Components/APP.js` uses `<StaggeredMotion/>` component to achieve the staggering effect.
-* `Components/APP_old.js` uses `setTimeout` instead of `<StaggeredMotion>` to acheive the effect staggering.
+* `Components/APP_old.js` uses `setTimeout` instead of `<StaggeredMotion>` to achieve the effect staggering.
 
 Demo
 =====
