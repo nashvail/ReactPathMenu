@@ -1,8 +1,10 @@
-'use strict';
+
 import React from 'react';
-import ReactDOM from 'react-dom';
+import './App.css';
 import { Motion, StaggeredMotion, spring } from 'react-motion';
-import range from 'lodash.range';
+
+import { faTimesCircle, faPencilAlt, faTooth, faToriiGate, faTrafficLight, faTrain, faTransgender, faTree, faTrophy} from '@fortawesome/free-solid-svg-icons'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 
 // Components 
 
@@ -31,7 +33,7 @@ const FLY_OUT_RADIUS = 130,
 
 // Names of icons for each button retreived from fontAwesome, we'll add a little extra just in case 
 // the NUM_CHILDREN is changed to a bigger value
-let childButtonIcons = ['pencil', 'at', 'camera', 'bell', 'comment', 'bolt', 'ban', 'code'];
+let childButtonIcons = [faPencilAlt, faTooth, faToriiGate, faTrafficLight,faTrain,faTransgender, faTree, faTrophy];
 
 
 // Utility functions
@@ -48,8 +50,15 @@ function finalChildDeltaPositions(index) {
   };
 }
 
+function range(start, stop, step) {
+  var a = [start], b = start;
+  while (b < stop) {
+      a.push(b += step || 1);
+  }
+  return a;
+}
 
-class APP extends React.Component {
+export default class App extends React.Component {
   constructor(props) {
     super(props);
 
@@ -143,14 +152,15 @@ class APP extends React.Component {
 
   renderChildButtons() {
     const { isOpen } = this.state;
-    const targetButtonStylesInitObject = range(NUM_CHILDREN).map(i => {
+    const targetButtonStylesInit = range(0, NUM_CHILDREN, 1).map(i => {
       return isOpen ? this.finalChildButtonStylesInit(i) : this.initialChildButtonStylesInit();
     });
 
+    console.log(targetButtonStylesInit);
     //StaggeredMotion now takes an Array of object
-    const targetButtonStylesInit = Object.keys(targetButtonStylesInitObject).map(key => targetButtonStylesInitObject[key]);
+    //const targetButtonStylesInit = Object.keys(targetButtonStylesInitObject).map(key => targetButtonStylesInitObject[key]);
 
-    const targetButtonStyles = range(NUM_CHILDREN).map(i => {
+    const targetButtonStyles = range(0, NUM_CHILDREN, 1).map(i => {
       return isOpen ? this.finalChildButtonStyles(i) : this.initialChildButtonStyles();
     });
 
@@ -209,7 +219,7 @@ class APP extends React.Component {
     // BUTTON NO 1    -----------------------------o-|---------------------------------------------
     // BUTTON NO 2    -------------------------------|------------------------------------O--------
     let calculateStylesForNextFrame = prevFrameStyles => {
-      prevFrameStyles = isOpen ? prevFrameStyles : prevFrameStyles.reverse();
+      // prevFrameStyles = isOpen ? prevFrameStyles : prevFrameStyles.reverse();
 
       let nextFrameTargetStyles = prevFrameStyles.map((buttonStyleInPreviousFrame, i) => {
         //animation always starts from first button
@@ -229,7 +239,7 @@ class APP extends React.Component {
         return shouldApplyTargetStyle() ? targetButtonStyles[i] : buttonStyleInPreviousFrame;
       });
 
-      return isOpen ? nextFrameTargetStyles : nextFrameTargetStyles.reverse();
+      return  nextFrameTargetStyles;
     };
 
     return (
@@ -250,7 +260,7 @@ class APP extends React.Component {
 									width
 								}}
 							>
-								<i className={"fa fa-" + childButtonIcons[index] + " fa-lg"}></i>
+								<FontAwesomeIcon icon={childButtonIcons[index]} size="1x"></FontAwesomeIcon>
 							</div>
 						)}
 					</div>
@@ -260,20 +270,18 @@ class APP extends React.Component {
   }
 
   render() {
-    let { isOpen } = this.state;
-    let mainButtonRotation =
-      isOpen ? { rotate: spring(0, { stiffness: 500, damping: 30 }) } : { rotate: spring(-135, { stiffness: 500, damping: 30 }) };
+    let mainButtonRotation = { rotate: spring(this.state.isOpen ? 0 : -135, { stiffness: 500, damping: 30 }) };
     return (
       <div>
 				{this.renderChildButtons()}
-				<Motion style={mainButtonRotation}>
+        <Motion style={mainButtonRotation}>
 					{({rotate}) =>
 						<div
 							className="main-button"
 							style={{...this.mainButtonStyles(), transform: `rotate(${rotate}deg)`}}
 							onClick={this.toggleMenu}>
 							{/*Using fa-close instead of fa-plus because fa-plus doesn't center properly*/}
-							<i className="fa fa-close fa-3x"/>
+              <FontAwesomeIcon icon={faTimesCircle} size="6x" />
 						</div>
 					}
 				</Motion>
@@ -281,5 +289,3 @@ class APP extends React.Component {
     );
   }
 };
-
-module.exports = APP;
