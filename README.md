@@ -15,9 +15,9 @@ Demo
 
 To run 
 ======
-1. `npm install`
-2. `npm start`
-3. Open `index.html` in your favorite browser.
+1. `yarn install`
+2. `yarn start`
+
 
 
 
