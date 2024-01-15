@@ -1,18 +1,29 @@
+
+const path = require("path");
+
 module.exports = {
+	mode: 'development', // or 'production' or 'none'
 	entry: './app.js',
 	output: {
-		filename: './public/bundle.js'
+	  path: path.resolve(__dirname, "public"),
+	  filename: "bundle.js",
+	  publicPath: "/",
 	},
 	module: {
-		loaders: [
-			{
-				test: /\.js$/,
-				exclude: /node_modules/,
-				loader: 'babel',
-				query: {
-					presets: ['stage-2', 'es2015', 'react']
-				}
-			}
-		]
-	}
-};
+		rules: [
+		  {
+			test: /\.js$/,
+			exclude: /node_modules/,
+			use: {
+			  loader: 'babel-loader',
+			  options: {
+				presets: ['@babel/preset-env', '@babel/preset-react'],
+				plugins: ['@babel/plugin-syntax-jsx']
+				// Add other plugins if needed
+			  },
+			},
+		  },
+		],
+	  },
+  };
+  
