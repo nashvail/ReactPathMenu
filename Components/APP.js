@@ -139,16 +139,20 @@ const FabAction = () => {
     const scaleMin = initialChildButtonStyles().scale.val;
     const scaleMax = finalChildButtonStyles(0).scale.val;
 
-    //This function returns target styles for each child button in current animation frame
-    //according to actual styles in previous animation frame.
-    //Each button could have one of two target styles
-    // - defined in initialChildButtonStyles (for collapsed buttons)
-    // - defined in finalChildButtonStyles (for expanded buttons)
-    // To decide which target style should be applied function uses css 'scale' property
-    // for previous button in previous animation frame.
-    // When 'scale' for previous button passes some 'border' which is a simple combination one of
-    // two 'scale' values and some OFFSET the target style for next button should be changed.
-    //
+   /*
+    This function calculates the target styles for each child button in the current animation frame
+    based on the actual styles from the previous animation frame.
+    
+    Each button can have one of two target styles:
+    - defined in initialChildButtonStyles (for collapsed buttons)
+    - defined in finalChildButtonStyles (for expanded buttons)
+    
+    To determine which target style should be applied, the function utilizes the CSS 'scale' property
+    from the previous button in the previous animation frame.
+    When the 'scale' for the previous button surpasses a certain 'border', which is determined by a combination
+    of two 'scale' values and an OFFSET, the target style for the next button should be updated.
+*/
+
     // For example let's set the OFFSET for 0.3 - it this case border's value for closed buttons will be 0.8.
     //
     // All buttons are closed
